@@ -20,14 +20,18 @@ def neg_log_likelihood(data, theta, beta):
     :param beta: Vector
     :return: float
     """
-    #####################################################################
-    # TODO:                                                             #
-    # Implement the function as described in the docstring.             #
-    #####################################################################
     log_lklihood = 0.
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    num_items = len(data['user_id'])
+
+    for i in range(num_items):
+        user_id = data['user_id'][i]
+        question_id = data['question_id'][i]
+        is_correct = data['is_correct'][i]
+        
+        if not np.isnan(is_correct):
+            p_i = 1 / (1 + np.exp(beta[question_id] - theta[user_id]))
+            log_likelihood += is_correct * np.log(p_i) + (1 - is_correct) * np.log(1 - p_i)
+            
     return -log_lklihood
 
 
