@@ -30,7 +30,7 @@ def neg_log_likelihood(data, theta, beta):
         
         if not np.isnan(is_correct):
             p_i = 1 / (1 + np.exp(beta[question_id] - theta[user_id]))
-            log_likelihood += is_correct * np.log(p_i) + (1 - is_correct) * np.log(1 - p_i)
+            log_lklihood += is_correct * np.log(p_i) + (1 - is_correct) * np.log(1 - p_i)
             
     return -log_lklihood
 
