@@ -71,6 +71,12 @@ class AutoEncoder(nn.Module):
         # Use sigmoid activations for f and g.                              #
         #####################################################################
         out = inputs
+        # print(self.g(out))
+        # print(self.g(out).shape)
+        # return
+        sig = nn.Sigmoid()
+        m = nn.Sequential(self.g, sig, self.h, sig)
+        out = m(out)
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
@@ -113,7 +119,7 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
             target[0][nan_mask] = output[0][nan_mask]
 
-            loss = torch.sum((output - target) ** 2.)
+            loss = torch.sum((output - target) ** 2.) + lamb / 2 * model.get_weight_norm()
             loss.backward()
 
             train_loss += loss.item()
@@ -154,7 +160,7 @@ def evaluate(model, train_data, valid_data):
 
 
 def main():
-    zero_train_matrix, train_matrix, valid_data, test_data = load_data()
+    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path="data")
 
     #####################################################################
     # TODO:                                                             #
@@ -162,13 +168,16 @@ def main():
     # validation set.                                                   #
     #####################################################################
     # Set model hyperparameters.
-    k = None
-    model = None
+
+    # possible k = {10, 50, 100, 200, 500}
+    # num_question = number of columns in train_matrix
+    k = 50
+    model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
-    lr = None
-    num_epoch = None
-    lamb = None
+    lr = 0.01
+    num_epoch = 40
+    lamb = 0
 
     train(model, lr, lamb, train_matrix, zero_train_matrix,
           valid_data, num_epoch)
