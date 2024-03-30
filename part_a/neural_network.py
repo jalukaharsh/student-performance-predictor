@@ -34,6 +34,8 @@ def load_data(base_path="../data"):
     zero_train_matrix = torch.FloatTensor(zero_train_matrix)
     train_matrix = torch.FloatTensor(train_matrix)
 
+    print(train_matrix[0])
+
     return zero_train_matrix, train_matrix, valid_data, test_data
 
 
@@ -171,13 +173,13 @@ def main():
 
     # possible k = {10, 50, 100, 200, 500}
     # num_question = number of columns in train_matrix
-    k = 50
+    k = 10
     model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
-    lr = 0.01
+    lr = 1
     num_epoch = 40
-    lamb = 0
+    lamb = 1
 
     train(model, lr, lamb, train_matrix, zero_train_matrix,
           valid_data, num_epoch)
