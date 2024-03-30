@@ -9,6 +9,8 @@ import torch.utils.data
 import numpy as np
 import torch
 
+import matplotlib.pyplot as plt
+
 
 def load_data(base_path="../data"):
     """ Load the data in PyTorch Tensor.
@@ -98,7 +100,10 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     :param num_epoch: int
     :return: None
     """
-    # TODO: Add a regularizer to the cost function. 
+
+    valid_array = []
+    train_array = []
+    epoch_array = []
     
     # Tell PyTorch you are training the model.
     model.train()
@@ -119,7 +124,8 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
 
             # Mask the target to only compute the gradient of valid entries.
             nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
-            target[0][nan_mask] = output[0][nan_mask]
+            # target[0][nan_mask] = output[0][nan_mask]
+            target[0:1][nan_mask] = output[0:1][nan_mask]
 
             loss = torch.sum((output - target) ** 2.) + lamb / 2 * model.get_weight_norm()
             loss.backward()
@@ -128,8 +134,16 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
             optimizer.step()
 
         valid_acc = evaluate(model, zero_train_data, valid_data)
+
         print("Epoch: {} \tTraining Cost: {:.6f}\t "
               "Valid Acc: {}".format(epoch, train_loss, valid_acc))
+
+        valid_array.append(valid_acc)
+        train_array.append(train_loss)
+        epoch_array.append(epoch)
+
+    return valid_array, train_array, epoch_array
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -162,7 +176,7 @@ def evaluate(model, train_data, valid_data):
 
 
 def main():
-    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path="data")
+    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path="C:/Users/Harsh Jaluka/OneDrive/Desktop/CSC311 - Introduction to Machine Learning/Project/csc311-project/data")
 
     #####################################################################
     # TODO:                                                             #
@@ -177,16 +191,29 @@ def main():
     model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
-    lr = 1
-    num_epoch = 40
-    lamb = 1
+    lr = 0.1
+    num_epoch = 10
+    lamb = 0
 
-    train(model, lr, lamb, train_matrix, zero_train_matrix,
-          valid_data, num_epoch)
+    title = 'k{}_lr({})_plots'.format(k, '_'.join(str(lr).split('.')))
+    valid_acc, loss_array, epoch_array = train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
+
+    plt.figure(figsize=(20, 10))
+    plt.subplot(1, 2, 1), plt.plot(epoch_array, loss_array, label='k = {}, lr = {}'.format(k, lr), color='#327ce3')
+    plt.xlabel("Epoch"), plt.ylabel("Training Cost")
+    plt.title("Training cost vs epoch")
+    plt.legend()
+    plt.subplot(1, 2, 2), plt.plot(epoch_array, valid_acc, label='k = {}, lr = {}'.format(k, lr), color='orange')
+    plt.xlabel("Epoch"), plt.ylabel("Validation Accuracy")
+    plt.title("Validation accuracy vs epoch")
+    plt.legend()
+    plt.savefig(title)
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
 
 
 if __name__ == "__main__":
+
     main()
