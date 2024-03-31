@@ -69,15 +69,7 @@ class AutoEncoder(nn.Module):
         :param inputs: user vector.
         :return: user vector.
         """
-        #####################################################################
-        # TODO:                                                             #
-        # Implement the function as described in the docstring.             #
-        # Use sigmoid activations for f and g.                              #
-        #####################################################################
         out = inputs
-        # print(self.g(out))
-        # print(self.g(out).shape)
-        # return
         sig = nn.Sigmoid()
         m = nn.Sequential(self.g, sig, self.h, sig)
         out = m(out)
@@ -98,7 +90,7 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     :param zero_train_data: 2D FloatTensor
     :param valid_data: Dict
     :param num_epoch: int
-    :return: None
+    :return: 3-tuple containing arrays for validation accuracies, training costs and corresponding epochs
     """
 
     valid_array = []
@@ -175,29 +167,8 @@ def evaluate(model, train_data, valid_data):
     return correct / float(total)
 
 
-def main():
-    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path="C:/Users/Harsh Jaluka/OneDrive/Desktop/CSC311 - Introduction to Machine Learning/Project/csc311-project/data")
-
-    #####################################################################
-    # TODO:                                                             #
-    # Try out 5 different k and select the best k using the             #
-    # validation set.                                                   #
-    #####################################################################
-    # Set model hyperparameters.
-
-    # possible k = {10, 50, 100, 200, 500}
-    # num_question = number of columns in train_matrix
-    k = 10
-    model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
-
-    # Set optimization hyperparameters.
-    lr = 0.1
-    num_epoch = 10
-    lamb = 0
-
-    title = 'k{}_lr({})_plots'.format(k, '_'.join(str(lr).split('.')))
-    valid_acc, loss_array, epoch_array = train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
-
+def plot_graphs(epoch_array, k, lamb, loss_array, lr, valid_acc):
+    title = 'k{}_lr({})_lamb({})_plots'.format(k, '_'.join(str(lr).split('.')), '_'.join(str(lamb).split('.')))
     plt.figure(figsize=(20, 10))
     plt.subplot(1, 2, 1), plt.plot(epoch_array, loss_array, label='k = {}, lr = {}'.format(k, lr), color='#327ce3')
     plt.xlabel("Epoch"), plt.ylabel("Training Cost")
@@ -208,6 +179,33 @@ def main():
     plt.title("Validation accuracy vs epoch")
     plt.legend()
     plt.savefig(title)
+
+
+def main():
+    path_harsh = "C:/Users/Harsh Jaluka/OneDrive/Desktop/CSC311 - Introduction to Machine Learning/Project/" \
+                 "csc311-project/data"
+    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path=path_harsh)
+
+    # Set model hyperparameters.
+
+    # possible k = {10, 50, 100, 200, 500}
+    # num_question = number of columns in train_matrix
+
+    k = 200
+    model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
+
+    # Set optimization hyperparameters.
+    # We worked with lr = {0.001, 0.01, 0.1, 1}
+    lr = 0.01
+    num_epoch = 40
+
+    # lambda choices = {0.001, 0.01, 0.1, 1}
+    lamb = 0.01
+
+    print('lambda:', lamb, 'lr:', lr, 'k:', k)
+
+    valid_acc, loss_array, epoch_array = train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
+    plot_graphs(epoch_array, k, lamb, loss_array, lr, valid_acc)
 
     #####################################################################
     #                       END OF YOUR CODE                            #
