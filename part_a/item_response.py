@@ -7,7 +7,10 @@ import matplotlib.pyplot as plt
 def sigmoid(x):
     """ Apply sigmoid function.
     """
-    return np.exp(x) / (1 + np.exp(x))
+    if x >= 0:
+        return 1 / (1 + np.exp(-x))
+    else:
+        return np.exp(x) / (1 + np.exp(x))
 
 
 def neg_log_likelihood(data, theta, beta):
@@ -23,15 +26,23 @@ def neg_log_likelihood(data, theta, beta):
     """
     log_lklihood = 0.
     num_items = len(data['user_id'])
+    epsilon = 1e-15
 
     for i in range(num_items):
         user_id = data['user_id'][i]
         question_id = data['question_id'][i]
         is_correct = data['is_correct'][i]
 
+        # Check if is_correct is not NaN
         if not np.isnan(is_correct):
-            p_i = 1 / (1 + np.exp(beta[question_id] - theta[user_id]))
-            log_lklihood += is_correct * np.log(p_i) + (1 - is_correct) * np.log(1 - p_i)
+            # Compute the logit
+            logit = beta[question_id] - theta[user_id]
+
+            # Compute the sigmoid function with logit
+            p_i = sigmoid(logit)
+
+            # Compute the log-likelihood contribution
+            log_lklihood += is_correct * np.log(p_i + epsilon) + (1 - is_correct) * np.log(1 - p_i + epsilon)
 
     return -log_lklihood
 
@@ -53,16 +64,22 @@ def update_theta_beta(data, lr, theta, beta):
     :param beta: Vector
     :return: tuple of vectors
     """
-    num_users = len(theta)
-    num_questions = len(beta)
+    num_items = len(data['user_id'])
+    epsilon = 1e-15
 
-    for i in range(len(data['user_id'])):
+    for i in range(num_items):
         user_id = data['user_id'][i]
         question_id = data['question_id'][i]
         is_correct = data['is_correct'][i]
 
         if not np.isnan(is_correct):
-            p_i = sigmoid(beta[question_id] - theta[user_id])
+            # Compute the logit
+            logit = beta[question_id] - theta[user_id]
+
+            # Compute the sigmoid function with logit
+            p_i = sigmoid(logit)
+
+            # Compute the gradients
             grad_theta = (is_correct - p_i) * beta[question_id]
             grad_beta = (is_correct - p_i) * (theta[user_id] - beta[question_id])
 
@@ -92,15 +109,20 @@ def irt(data, val_data, lr, iterations):
     beta = np.random.rand(num_questions)
 
     val_acc_lst = []
+    train_nlld_lst = []
+    val_nlld_lst = []
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
+        train_nlld_lst.append(neg_lld)
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
+        neg_lld = neg_log_likelihood(val_data, theta=theta, beta=beta)
+        val_nlld_lst.append(neg_lld)
 
-    return theta, beta, val_acc_lst
+    return theta, beta, val_acc_lst, train_nlld_lst, val_nlld_lst
 
 
 def evaluate(data, theta, beta):
@@ -130,8 +152,8 @@ def main():
     test_data = load_public_test_csv("../data")
 
     # Hyperparameters
-    learning_rates = [0.0001, 0.001, 0.01, 0.1]
-    iterations = [10, 25, 50]
+    learning_rates = [0.0001, 0.001, 0.01]
+    iterations = [25, 35, 45]
 
     # Tune the hyperparamaters
     best_val_accuracy = 0
@@ -139,11 +161,10 @@ def main():
     best_iter = None
     best_theta = None
     best_beta = None
-    best_val_acc_lst = None
 
     for lr in learning_rates:
         for num_iter in iterations:
-            theta, beta, val_acc_lst = irt(train_data, val_data, lr, num_iter)
+            theta, beta, val_acc_lst, train_nlld_lst, val_nlld_lst = irt(train_data, val_data, lr, num_iter)
             val_accuracy = evaluate(data=val_data, theta=theta, beta=beta)
 
             if val_accuracy > best_val_accuracy:
@@ -152,24 +173,14 @@ def main():
                 best_iter = num_iter
                 best_theta = theta
                 best_beta = beta
-                best_val_acc_lst = val_acc_lst
 
     print(f"Best Learning Rate: {best_lr}, Best Number of Iterations: {best_iter}")
 
     # Plot the training and validation log-likelihoods as a function of iteration
-    train_nll_list = []
-    val_nll_list = []
+    theta, beta, val_acc_lst, train_nlld_lst, val_nlld_lst = irt(train_data, val_data, best_lr, best_iter)
 
-    for num_iter in range(0, best_iter):
-        theta, beta, val_acc_lst = irt(train_data, val_data, best_lr, num_iter)
-        train_nll = neg_log_likelihood(data=train_data, theta=theta, beta=beta)
-        train_nll_list.append(train_nll)
-
-        val_nll = neg_log_likelihood(data=val_data, theta=theta, beta=beta)
-        val_nll_list.append(val_nll)
-
-    plt.plot(range(1, best_iter + 1), train_nll_list, label='Training Log-Likelihood')
-    plt.plot(range(1, best_iter + 1), val_nll_list, label='Validation Log-Likelihood')
+    plt.plot(range(1, best_iter + 1), train_nlld_lst, label='Training Log-Likelihood')
+    plt.plot(range(1, best_iter + 1), val_nlld_lst, label='Validation Log-Likelihood')
     plt.xlabel('Iteration')
     plt.ylabel('Log-Likelihood')
     plt.title('Training and Validation Log-Likelihoods')
