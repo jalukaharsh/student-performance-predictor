@@ -92,11 +92,9 @@ def irt(data, val_data, lr, iterations):
     beta = np.random.rand(num_questions)
 
     val_acc_lst = []
-    # log_lst = []
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
-        # log_lst.append()
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
@@ -131,15 +129,17 @@ def main():
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
 
-    # Hyperparameters to tune (change values)
+    # Hyperparameters
     learning_rates = [0.0001, 0.001, 0.01, 0.1]
     iterations = [10, 25, 50]
 
+    # Tune the hyperparamaters
     best_val_accuracy = 0
     best_lr = None
     best_iter = None
     best_theta = None
     best_beta = None
+    best_val_acc_lst = None
 
     for lr in learning_rates:
         for num_iter in iterations:
@@ -152,20 +152,31 @@ def main():
                 best_iter = num_iter
                 best_theta = theta
                 best_beta = beta
+                best_val_acc_lst = val_acc_lst
 
     print(f"Best Learning Rate: {best_lr}, Best Number of Iterations: {best_iter}")
-    print(train_accs)
-    print(val_accs)
-    # Plot the training and validation log-likelihoods
-    # plt.plot(epoch_array, train_accs, label='Training Log-Likelihood')
-    # plt.plot(epoch_array, val_accs, label='Validation Log-Likelihood')
+
+    # Plot the training and validation log-likelihoods as a function of iteration
+    train_nll_list = []
+    val_nll_list = []
+
+    for num_iter in range(0, best_iter):
+        theta, beta, val_acc_lst = irt(train_data, val_data, best_lr, num_iter)
+        train_nll = neg_log_likelihood(data=train_data, theta=theta, beta=beta)
+        train_nll_list.append(train_nll)
+
+        val_nll = neg_log_likelihood(data=val_data, theta=theta, beta=beta)
+        val_nll_list.append(val_nll)
+
+    plt.plot(range(1, best_iter + 1), train_nll_list, label='Training Log-Likelihood')
+    plt.plot(range(1, best_iter + 1), val_nll_list, label='Validation Log-Likelihood')
     plt.xlabel('Iteration')
     plt.ylabel('Log-Likelihood')
     plt.title('Training and Validation Log-Likelihoods')
     plt.legend()
     plt.show()
 
-    # Evaluate the final model on validation and test datasets
+    # Report the validation and test accuracies of the final model
     val_accuracy = evaluate(data=val_data, theta=best_theta, beta=best_beta)
     test_accuracy = evaluate(data=test_data, theta=best_theta, beta=best_beta)
 
