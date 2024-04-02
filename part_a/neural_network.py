@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 22})
 
 
 def load_data(base_path="../data"):
@@ -35,8 +36,6 @@ def load_data(base_path="../data"):
     # Change to Float Tensor for PyTorch.
     zero_train_matrix = torch.FloatTensor(zero_train_matrix)
     train_matrix = torch.FloatTensor(train_matrix)
-
-    print(train_matrix[0])
 
     return zero_train_matrix, train_matrix, valid_data, test_data
 
@@ -184,14 +183,14 @@ def plot_graphs(epoch_array, k, lamb, loss_array, lr, valid_acc):
 def main():
     path_harsh = "C:/Users/Harsh Jaluka/OneDrive/Desktop/CSC311 - Introduction to Machine Learning/Project/" \
                  "csc311-project/data"
-    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path=path_harsh)
+    zero_train_matrix, train_matrix, valid_data, test_data = load_data()
 
     # Set model hyperparameters.
 
     # possible k = {10, 50, 100, 200, 500}
     # num_question = number of columns in train_matrix
 
-    k = 200
+    k = 50
     model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
@@ -200,7 +199,7 @@ def main():
     num_epoch = 40
 
     # lambda choices = {0.001, 0.01, 0.1, 1}
-    lamb = 0.01
+    lamb = 0.001
 
     print('lambda:', lamb, 'lr:', lr, 'k:', k)
 
