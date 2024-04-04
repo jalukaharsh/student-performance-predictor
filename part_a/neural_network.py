@@ -9,6 +9,9 @@ import torch.utils.data
 import numpy as np
 import torch
 
+import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 22})
+
 
 def load_data(base_path="../data"):
     """ Load the data in PyTorch Tensor.
@@ -65,12 +68,10 @@ class AutoEncoder(nn.Module):
         :param inputs: user vector.
         :return: user vector.
         """
-        #####################################################################
-        # TODO:                                                             #
-        # Implement the function as described in the docstring.             #
-        # Use sigmoid activations for f and g.                              #
-        #####################################################################
         out = inputs
+        sig = nn.Sigmoid()
+        m = nn.Sequential(self.g, sig, self.h, sig)
+        out = m(out)
         #####################################################################
         #                       END OF YOUR CODE                            #
         #####################################################################
@@ -88,9 +89,12 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
     :param zero_train_data: 2D FloatTensor
     :param valid_data: Dict
     :param num_epoch: int
-    :return: None
+    :return: 3-tuple containing arrays for validation accuracies, training costs and corresponding epochs
     """
-    # TODO: Add a regularizer to the cost function. 
+
+    valid_array = []
+    train_array = []
+    epoch_array = []
     
     # Tell PyTorch you are training the model.
     model.train()
@@ -111,17 +115,26 @@ def train(model, lr, lamb, train_data, zero_train_data, valid_data, num_epoch):
 
             # Mask the target to only compute the gradient of valid entries.
             nan_mask = np.isnan(train_data[user_id].unsqueeze(0).numpy())
-            target[0][nan_mask] = output[0][nan_mask]
+            # target[0][nan_mask] = output[0][nan_mask]
+            target[0:1][nan_mask] = output[0:1][nan_mask]
 
-            loss = torch.sum((output - target) ** 2.)
+            loss = torch.sum((output - target) ** 2.) + lamb / 2 * model.get_weight_norm()
             loss.backward()
 
             train_loss += loss.item()
             optimizer.step()
 
         valid_acc = evaluate(model, zero_train_data, valid_data)
+
         print("Epoch: {} \tTraining Cost: {:.6f}\t "
               "Valid Acc: {}".format(epoch, train_loss, valid_acc))
+
+        valid_array.append(valid_acc)
+        train_array.append(train_loss)
+        epoch_array.append(epoch)
+
+    return valid_array, train_array, epoch_array
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
@@ -153,29 +166,51 @@ def evaluate(model, train_data, valid_data):
     return correct / float(total)
 
 
+def plot_graphs(epoch_array, k, lamb, loss_array, lr, valid_acc):
+    title = 'k{}_lr({})_lamb({})_plots'.format(k, '_'.join(str(lr).split('.')), '_'.join(str(lamb).split('.')))
+    plt.figure(figsize=(20, 10))
+    plt.subplot(1, 2, 1), plt.plot(epoch_array, loss_array, label='k = {}, lr = {}'.format(k, lr), color='#327ce3')
+    plt.xlabel("Epoch"), plt.ylabel("Training Cost")
+    plt.title("Training cost vs epoch")
+    plt.legend()
+    plt.subplot(1, 2, 2), plt.plot(epoch_array, valid_acc, label='k = {}, lr = {}'.format(k, lr), color='orange')
+    plt.xlabel("Epoch"), plt.ylabel("Validation Accuracy")
+    plt.title("Validation accuracy vs epoch")
+    plt.legend()
+    plt.savefig(title)
+
+
 def main():
+    path_harsh = "C:/Users/Harsh Jaluka/OneDrive/Desktop/CSC311 - Introduction to Machine Learning/Project/" \
+                 "csc311-project/data"
     zero_train_matrix, train_matrix, valid_data, test_data = load_data()
 
-    #####################################################################
-    # TODO:                                                             #
-    # Try out 5 different k and select the best k using the             #
-    # validation set.                                                   #
-    #####################################################################
     # Set model hyperparameters.
-    k = None
-    model = None
+
+    # possible k = {10, 50, 100, 200, 500}
+    # num_question = number of columns in train_matrix
+
+    k = 50
+    model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
-    lr = None
-    num_epoch = None
-    lamb = None
+    # We worked with lr = {0.001, 0.01, 0.1, 1}
+    lr = 0.01
+    num_epoch = 40
 
-    train(model, lr, lamb, train_matrix, zero_train_matrix,
-          valid_data, num_epoch)
+    # lambda choices = {0.001, 0.01, 0.1, 1}
+    lamb = 0.001
+
+    print('lambda:', lamb, 'lr:', lr, 'k:', k)
+
+    valid_acc, loss_array, epoch_array = train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
+    plot_graphs(epoch_array, k, lamb, loss_array, lr, valid_acc)
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
 
 
 if __name__ == "__main__":
+
     main()
