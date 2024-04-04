@@ -1,5 +1,6 @@
 from sklearn.impute import KNNImputer
 from utils import *
+import matplotlib.pyplot as plt
 
 
 def knn_impute_by_user(matrix, valid_data, k):
@@ -33,15 +34,20 @@ def knn_impute_by_item(matrix, valid_data, k):
     :param k: int
     :return: float
     """
-    #####################################################################
-    # TODO:                                                             #
-    # Implement the function as described in the docstring.             #
-    #####################################################################
-    acc = None
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    transposed_matrix = matrix.T
+
+    # Create the KNN imputer that works on the rows
+    nbrs = KNNImputer(n_neighbors=k)
+    imputed_matrix = nbrs.fit_transform(transposed_matrix)
+
+    # Transpose the matrix back to the original user-item format
+    imputed_matrix = imputed_matrix.T
+
+    # Calculate the accuracy on the validation data
+    acc = sparse_matrix_evaluate(valid_data, imputed_matrix)
+    print("Validation Accuracy: {}".format(acc))
     return acc
+
 
 
 def main():
@@ -54,17 +60,81 @@ def main():
     print("Shape of sparse matrix:")
     print(sparse_matrix.shape)
 
-    #####################################################################
-    # TODO:                                                             #
-    # Compute the validation accuracy for each k. Then pick k* with     #
-    # the best performance and report the test accuracy with the        #
-    # chosen k*.                                                        #
-    #####################################################################
-    pass
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    # Define the range of k values to test.
+    k_values = [1, 6, 11, 16, 21, 26]
+    validation_accuracies = []
 
+    # Compute the validation accuracy for each k.
+    for k in k_values:
+        print(f"Running k-NN with k = {k}")
+        accuracy = knn_impute_by_user(sparse_matrix, val_data, k)
+        validation_accuracies.append(accuracy)
+        print(f"Validation accuracy for k = {k}: {accuracy}")
+
+    # Plot validation accuracies.
+    plt.figure(figsize=(10, 5))
+    plt.plot(k_values, validation_accuracies, marker='o')
+    plt.title('Validation Accuracy for Different k Values')
+    plt.xlabel('k')
+    plt.ylabel('Accuracy')
+    plt.xticks(k_values)
+    plt.grid(True)
+    plt.show()
+
+    # Pick the best performing k value based on validation accuracy.
+    best_k_index = validation_accuracies.index(max(validation_accuracies))
+    best_k = k_values[best_k_index]
+    print(f"Best k value: {best_k}")
+
+    # Report the test accuracy with the chosen k.
+    test_accuracy = knn_impute_by_user(sparse_matrix, test_data, best_k)
+    print(f"Test accuracy with k = {best_k}: {test_accuracy}")
 
 if __name__ == "__main__":
     main()
+
+#MAIN FUNCTION WITH ITEM BASED COLLABORATIVE FILTERING PART C)
+    
+# def main():
+#     # Load the data
+#     sparse_matrix = load_train_sparse("../data").toarray()
+#     val_data = load_valid_csv("../data")
+#     test_data = load_public_test_csv("../data")
+
+#     print("Sparse matrix:")
+#     print(sparse_matrix)
+#     print("Shape of sparse matrix:")
+#     print(sparse_matrix.shape)
+
+#     # Define the range of k values to test for user-based collaborative filtering
+#     k_values = [1, 6, 11, 16, 21, 26]
+#     user_validation_accuracies = []
+
+#     # Compute the validation accuracy for each k with user-based collaborative filtering
+#     for k in k_values:
+#         print(f"Running item-based k-NN with k = {k}")
+#         accuracy = knn_impute_by_item(sparse_matrix, val_data, k)
+#         user_validation_accuracies.append(accuracy)
+#         print(f"Validation accuracy for k = {k}: {accuracy}")
+
+#     # Plot validation accuracies for user-based collaborative filtering
+#     plt.figure(figsize=(10, 5))
+#     plt.plot(k_values, user_validation_accuracies, marker='o', linestyle='-', color='b')
+#     plt.title('Item-Based Collaborative Filtering: Validation Accuracy vs. K')
+#     plt.xlabel('k')
+#     plt.ylabel('Accuracy')
+#     plt.xticks(k_values)
+#     plt.grid(True)
+#     plt.show()
+
+#     # Pick the best performing k value based on validation accuracy for user-based filtering
+#     best_k_index = user_validation_accuracies.index(max(user_validation_accuracies))
+#     best_k = k_values[best_k_index]
+#     print(f"Best k for item-based: {best_k}")
+
+#     # Report the test accuracy with the chosen k for user-based collaborative filtering
+#     test_accuracy = knn_impute_by_item(sparse_matrix, test_data, best_k)
+#     print(f"Test accuracy with best k (Item-based): {test_accuracy}")
+
+# if __name__ == "__main__":
+#     main()
