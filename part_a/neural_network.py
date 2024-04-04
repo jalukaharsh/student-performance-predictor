@@ -70,7 +70,7 @@ class AutoEncoder(nn.Module):
         """
         out = inputs
         sig = nn.Sigmoid()
-        m = nn.Sequential(self.g, sig, self.h, sig)
+        m = nn.Sequential(nn.Dropout(), self.g, sig, self.h, sig)
         out = m(out)
         #####################################################################
         #                       END OF YOUR CODE                            #
