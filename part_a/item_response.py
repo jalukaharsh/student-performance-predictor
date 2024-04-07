@@ -1,6 +1,7 @@
 from utils import *
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def sigmoid(x):
@@ -20,14 +21,28 @@ def neg_log_likelihood(data, theta, beta):
     :param beta: Vector
     :return: float
     """
-    #####################################################################
-    # TODO:                                                             #
-    # Implement the function as described in the docstring.             #
-    #####################################################################
     log_lklihood = 0.
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    num_items = len(data['user_id'])
+    epsilon = 1e-15
+
+    for i in range(num_items):
+        user_id = data['user_id'][i]
+        question_id = data['question_id'][i]
+        is_correct = data['is_correct'][i]
+
+        # Check if is_correct is not NaN
+        if not np.isnan(is_correct):
+            # Compute the logit
+            logit = beta[question_id] - theta[user_id]
+
+            # Compute the sigmoid function with logit
+            p_i = sigmoid(logit)
+
+            # Compute the log-likelihood contribution
+            log_lklihood += is_correct * np.log(p_i + epsilon) + (1 - is_correct) * np.log(1 - p_i + epsilon)
+        else:
+            print('Found Nan!')
+
     return -log_lklihood
 
 
@@ -48,14 +63,29 @@ def update_theta_beta(data, lr, theta, beta):
     :param beta: Vector
     :return: tuple of vectors
     """
-    #####################################################################
-    # TODO:                                                             #
-    # Implement the function as described in the docstring.             #
-    #####################################################################
-    pass
-    #####################################################################
-    #                       END OF YOUR CODE                            #
-    #####################################################################
+    num_items = len(data['user_id'])
+    epsilon = 1e-15
+
+    for i in range(num_items):
+        user_id = data['user_id'][i]
+        question_id = data['question_id'][i]
+        is_correct = data['is_correct'][i]
+
+        if not np.isnan(is_correct):
+            # Compute the logit
+            logit = beta[question_id] - theta[user_id]
+
+            # Compute the sigmoid function with logit
+            p_i = sigmoid(logit)
+
+            # Compute the gradients
+            grad_theta = (is_correct - p_i) * beta[question_id]
+            grad_beta = (is_correct - p_i) * (theta[user_id] - beta[question_id])
+
+            # Update theta and beta
+            theta[user_id] += lr * grad_theta
+            beta[question_id] += lr * grad_beta
+
     return theta, beta
 
 
@@ -72,21 +102,26 @@ def irt(data, val_data, lr, iterations):
     :param iterations: int
     :return: (theta, beta, val_acc_lst)
     """
-    # TODO: Initialize theta and beta.
-    theta = None
-    beta = None
+    num_users = len(set(data['user_id']))
+    num_questions = len(set(data['question_id']))
+    theta = np.random.rand(num_users)
+    beta = np.random.rand(num_questions)
 
     val_acc_lst = []
+    train_nlld_lst = []
+    val_nlld_lst = []
 
     for i in range(iterations):
         neg_lld = neg_log_likelihood(data, theta=theta, beta=beta)
+        train_nlld_lst.append(neg_lld)
         score = evaluate(data=val_data, theta=theta, beta=beta)
         val_acc_lst.append(score)
         print("NLLK: {} \t Score: {}".format(neg_lld, score))
         theta, beta = update_theta_beta(data, lr, theta, beta)
+        neg_lld = neg_log_likelihood(val_data, theta=theta, beta=beta)
+        val_nlld_lst.append(neg_lld)
 
-    # TODO: You may change the return values to achieve what you want.
-    return theta, beta, val_acc_lst
+    return theta, beta, val_acc_lst, train_nlld_lst, val_nlld_lst
 
 
 def evaluate(data, theta, beta):
@@ -109,27 +144,64 @@ def evaluate(data, theta, beta):
 
 
 def main():
+
     train_data = load_train_csv("../data")
     # You may optionally use the sparse matrix.
     sparse_matrix = load_train_sparse("../data")
     val_data = load_valid_csv("../data")
     test_data = load_public_test_csv("../data")
 
-    #####################################################################
-    # TODO:                                                             #
-    # Tune learning rate and number of iterations. With the implemented #
-    # code, report the validation and test accuracy.                    #
-    #####################################################################
-    pass
+    # Hyperparameters
+    learning_rates = [0.0001, 0.001, 0.01]
+    iterations = [25, 35, 45]
+
+    # Tune the hyperparamaters
+    best_val_accuracy = 0
+    best_lr = 0.001
+    best_iter = 35
+    best_theta = None
+    best_beta = None
+
+    # for lr in learning_rates:
+    #     for num_iter in iterations:
+    #         theta, beta, val_acc_lst, train_nlld_lst, val_nlld_lst = irt(train_data, val_data, lr, num_iter)
+    #         val_accuracy = evaluate(data=val_data, theta=theta, beta=beta)
+    #
+    #         if val_accuracy > best_val_accuracy:
+    #             best_iter = num_iter
+    #             best_theta = theta
+    #             best_beta = beta
+
+    print(f"Best Learning Rate: {best_lr}, Best Number of Iterations: {best_iter}")
+
+    # Plot the training and validation log-likelihoods as a function of iteration
+    theta, beta, val_acc_lst, train_nlld_lst, val_nlld_lst = irt(train_data, val_data, best_lr, best_iter)
+
+    # plt.plot(range(1, best_iter + 1), train_nlld_lst, label='Training Log-Likelihood')
+    # plt.plot(range(1, best_iter + 1), val_nlld_lst, label='Validation Log-Likelihood')
+    # plt.xlabel('Iteration')
+    # plt.ylabel('Log-Likelihood')
+    # plt.title('Training and Validation Log-Likelihoods')
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
 
-    #####################################################################
-    # TODO:                                                             #
-    # Implement part (d)                                                #
-    #####################################################################
-    pass
+    questions = test_data["question_id"]
+
+    my_questions = {1: questions[0], 2: questions[1], 3: questions[2]}
+
+    for key in my_questions:
+        question_id = my_questions[key]
+        my_beta = beta[question_id]
+        probability = sigmoid(theta - my_beta)
+        plt.scatter(theta, probability, label='Question ID: {}'.format(question_id), marker='.')
+
+    plt.legend()
+    plt.xlabel(r'Trained student ability $\theta$')
+    plt.ylabel('Probability that student answers correctly')
+    plt.title('Probability that students answer question correctly' + '\n' + r'plotted against trained student ability $\theta$')
+
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
