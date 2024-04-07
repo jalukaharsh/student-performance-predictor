@@ -70,7 +70,8 @@ class AutoEncoder(nn.Module):
         """
         out = inputs
         sig = nn.Sigmoid()
-        m = nn.Sequential(self.g, sig, self.h, sig)
+        tanh = nn.Tanh()
+        m = nn.Sequential(nn.Dropout(p=0.2), self.g, sig, self.h, sig)
         out = m(out)
         #####################################################################
         #                       END OF YOUR CODE                            #
@@ -190,7 +191,7 @@ def main():
     # possible k = {10, 50, 100, 200, 500}
     # num_question = number of columns in train_matrix
 
-    k = 50
+    k = 115
     model = AutoEncoder(num_question=train_matrix.shape[1], k=k)
 
     # Set optimization hyperparameters.
@@ -205,7 +206,7 @@ def main():
 
     valid_acc, loss_array, epoch_array = train(model, lr, lamb, train_matrix, zero_train_matrix, valid_data, num_epoch)
     plot_graphs(epoch_array, k, lamb, loss_array, lr, valid_acc)
-
+    print(evaluate(model, zero_train_matrix, test_data))
     #####################################################################
     #                       END OF YOUR CODE                            #
     #####################################################################
