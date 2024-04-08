@@ -186,7 +186,7 @@ def main():
     path_harsh = "C:/Users/Harsh Jaluka/OneDrive/Desktop/CSC311 - Introduction to Machine Learning/Project/" \
                  "csc311-project/data"
     path_rish = "data"
-    zero_train_matrix, train_matrix, valid_data, test_data = load_data(base_path=path_rish)
+    zero_train_matrix, train_matrix, valid_data, test_data = load_data()
 
     # Set model hyperparameters.
 
